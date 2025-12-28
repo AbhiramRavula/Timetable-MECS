@@ -359,17 +359,20 @@ const fillGaps = (
   }
 
   let gapsFilled = 0;
+  const MAX_LIBRARY_PERIODS_PER_WEEK = 4;
 
   for (const section of sections) {
     const workingDays = getWorkingDays(section.year);
+    let libraryPeriodsThisWeek = 0;
 
     for (const day of workingDays) {
       // Fill all empty pre-lunch periods with Library
       for (const period of PRE_LUNCH_PERIODS) {
         if (!state.sectionBusy.has(`${section.id}-${day}-${period}`)) {
-          if (isSlotAvailable(state, faculty, libSubject.assignedFacultyId, libRoom.id, section.id, day, period)) {
+          if (libraryPeriodsThisWeek < MAX_LIBRARY_PERIODS_PER_WEEK && isSlotAvailable(state, faculty, libSubject.assignedFacultyId, libRoom.id, section.id, day, period)) {
             addEntry(state, day, period, libSubject.id, libSubject.assignedFacultyId, libRoom.id, section.id);
             gapsFilled++;
+            libraryPeriodsThisWeek++;
           }
         }
       }
