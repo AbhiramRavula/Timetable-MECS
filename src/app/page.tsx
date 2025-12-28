@@ -16,7 +16,8 @@ import {
   Trash2,
   GraduationCap,
   Search,
-  X
+  X,
+  UserCheck
 } from 'lucide-react';
 import type { 
   User, 
@@ -100,6 +101,9 @@ export default function App() {
     isPublished: false,
   });
 
+  const [loginMode, setLoginMode] = useState<'admin' | 'faculty_select' | 'public' | null>(null);
+  const [selectedFacultyId, setSelectedFacultyId] = useState<string>('');
+
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [facultySearch, setFacultySearch] = useState("");
   const [subjectSearch, setSubjectSearch] = useState("");
@@ -122,20 +126,37 @@ export default function App() {
     localStorage.setItem('timetable_data', JSON.stringify(state));
   }, [state]);
 
-  const handleLogin = (role: UserRole) => {
-    const isFaculty = role === UserRole.FACULTY;
-    const mockUser: User = {
-      id: isFaculty ? 'f2' : 'u1',
-      name: isFaculty ? 'MRS. Y. SIRISHA' : 'HoD IT',
-      email: isFaculty ? 'sirisha@matrusri.edu.in' : 'hod.it@matrusri.edu.in',
-      role: role,
+  const handleAdminLogin = () => {
+    const adminUser: User = {
+      id: 'u1',
+      name: 'HoD IT',
+      email: 'hod.it@matrusri.edu.in',
+      role: UserRole.ADMIN,
     };
-    setCurrentUser(mockUser);
+    setCurrentUser(adminUser);
+    setLoginMode(null);
+    setActiveTab('dashboard');
+  };
+
+  const handleFacultyLogin = () => {
+    if (!selectedFacultyId) return;
+    const facultyMember = state.faculty.find(f => f.id === selectedFacultyId);
+    if (!facultyMember) return;
+    
+    const facultyUser: User = {
+      id: facultyMember.id,
+      name: facultyMember.name,
+      email: facultyMember.email,
+      role: UserRole.FACULTY,
+    };
+    setCurrentUser(facultyUser);
+    setLoginMode(null);
     setActiveTab('dashboard');
   };
 
   const handleLogout = () => {
     setCurrentUser(null);
+    setLoginMode(null);
     setActiveTab('public');
   };
 
@@ -212,7 +233,62 @@ export default function App() {
     }
   };
 
-  if (!currentUser && activeTab !== 'public') {
+  if (!currentUser) {
+    if (loginMode === 'faculty_select') {
+      return (
+        <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
+          <div className="w-full max-w-sm">
+            <div className="flex justify-center mb-6">
+              <div className="w-20 h-20 bg-emerald-600 rounded-3xl flex items-center justify-center text-white shadow-xl shadow-emerald-200">
+                <UserCheck size={40} />
+              </div>
+            </div>
+            <h1 className="text-3xl font-black text-center text-slate-900 mb-2 tracking-tight">Select Your Profile</h1>
+            <p className="text-center text-slate-500 mb-10 font-semibold uppercase tracking-widest text-[10px]">Choose your name to view your schedule</p>
+            <div className="space-y-4">
+              <select 
+                value={selectedFacultyId}
+                onChange={(e) => setSelectedFacultyId(e.target.value)}
+                className="w-full p-4 border-2 border-slate-200 rounded-2xl bg-white font-bold text-slate-900 focus:border-emerald-500 outline-none"
+              >
+                <option value="" disabled>-- Select Faculty --</option>
+                {state.faculty.map(f => (
+                  <option key={f.id} value={f.id}>{f.name}</option>
+                ))}
+              </select>
+              <button 
+                onClick={handleFacultyLogin} 
+                disabled={!selectedFacultyId}
+                className="w-full py-4 px-6 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-2xl transition-all flex items-center justify-center shadow-xl shadow-emerald-100 disabled:bg-slate-300 disabled:shadow-none"
+              >
+                <span>View My Timetable</span>
+              </button>
+              <button onClick={() => setLoginMode(null)} className="w-full py-3 px-6 text-slate-500 font-bold rounded-2xl transition-all text-center text-sm">
+                  &larr; Back to Login Options
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    
+    if (loginMode === 'public') {
+        return (
+           <div className="fixed inset-0 bg-white z-50 overflow-y-auto p-4 sm:p-6 md:p-10">
+              <div className="max-w-7xl mx-auto">
+                <div className="flex justify-between items-center mb-10 pb-6 border-b border-slate-100">
+                  <div className="flex items-center space-x-4">
+                    <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-blue-200"><Calendar size={24} /></div>
+                    <h2 className="text-3xl font-black text-slate-900 tracking-tight">Public Schedules</h2>
+                  </div>
+                  <button onClick={() => { setLoginMode(null); }} className="px-6 py-2 bg-slate-900 text-white rounded-xl text-sm font-bold shadow-lg">Return to Login</button>
+                </div>
+                <PublicTimetable state={state} />
+              </div>
+           </div>
+        )
+    }
+
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
         <div className="w-full max-w-sm">
@@ -224,11 +300,11 @@ export default function App() {
             <h1 className="text-3xl font-black text-center text-slate-900 mb-2 tracking-tight">College Timetable</h1>
             <p className="text-center text-slate-500 mb-10 font-semibold uppercase tracking-widest text-[10px]">Scheduling for Modern Institutions</p>
             <div className="space-y-4">
-                <button onClick={() => handleLogin(UserRole.ADMIN)} className="w-full py-4 px-6 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl transition-all flex items-center justify-between shadow-xl shadow-blue-100">
+                <button onClick={handleAdminLogin} className="w-full py-4 px-6 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl transition-all flex items-center justify-between shadow-xl shadow-blue-100">
                     <span>Admin Login</span>
                     <ChevronRight size={20} />
                 </button>
-                <button onClick={() => handleLogin(UserRole.FACULTY)} className="w-full py-4 px-6 bg-white border-2 border-slate-200 hover:border-blue-600 hover:text-blue-600 text-slate-800 font-bold rounded-2xl transition-all flex items-center justify-between">
+                <button onClick={() => setLoginMode('faculty_select')} className="w-full py-4 px-6 bg-white border-2 border-slate-200 hover:border-emerald-600 hover:text-emerald-600 text-slate-800 font-bold rounded-2xl transition-all flex items-center justify-between">
                     <span>Faculty Login</span>
                     <ChevronRight size={20} />
                 </button>
@@ -236,7 +312,7 @@ export default function App() {
                     <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-200"></div></div>
                     <div className="relative flex justify-center text-xs"><span className="px-2 bg-slate-50 text-slate-400 uppercase tracking-wider font-bold">OR</span></div>
                 </div>
-                <button onClick={() => setActiveTab('public')} className="w-full py-4 px-6 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-2xl transition-all text-center">
+                <button onClick={() => setLoginMode('public')} className="w-full py-4 px-6 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-2xl transition-all text-center">
                     View Public Timetables
                 </button>
             </div>
@@ -245,23 +321,6 @@ export default function App() {
     );
   }
   
-  if(activeTab === 'public') {
-    return (
-       <div className="fixed inset-0 bg-white z-50 overflow-y-auto p-4 sm:p-6 md:p-10">
-          <div className="max-w-7xl mx-auto">
-            <div className="flex justify-between items-center mb-10 pb-6 border-b border-slate-100">
-              <div className="flex items-center space-x-4">
-                <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-blue-200"><Calendar size={24} /></div>
-                <h2 className="text-3xl font-black text-slate-900 tracking-tight">Public Schedules</h2>
-              </div>
-              <button onClick={() => { setActiveTab('dashboard'); setCurrentUser(null); }} className="px-6 py-2 bg-slate-900 text-white rounded-xl text-sm font-bold shadow-lg">Return to Login</button>
-            </div>
-            <PublicTimetable state={state} />
-          </div>
-       </div>
-    )
-  }
-
   return (
     <div className="min-h-screen flex bg-slate-50 text-slate-900">
       <aside className="w-72 bg-white border-r border-slate-200 flex flex-col fixed inset-y-0 shadow-sm z-40">
@@ -796,6 +855,7 @@ const FacultyTimetable = ({ facultyId, state }: { facultyId: string; state: AppS
                   if (entry) {
                     const subject = subjects.find(s => s.id === entry.subjectId);
                     const section = sections.find(s => s.id === entry.sectionId);
+                    const room = state.rooms.find(r => r.id === entry.roomId);
                     return (
                       <td key={p} className="p-0 border-r-2 last:border-r-0 border-slate-900 min-w-[150px] h-24 text-center bg-blue-50">
                         <div className="flex-1 flex flex-col items-center justify-center p-2 h-full">
@@ -804,6 +864,7 @@ const FacultyTimetable = ({ facultyId, state }: { facultyId: string; state: AppS
                             {section ? `Sec ${section.name}, Year ${section.year}` : ''}
                           </span>
                            {entry.batch && <span className="text-[9px] text-purple-700 font-black bg-purple-100 px-1 rounded mt-1">BATCH {entry.batch}</span>}
+                           <span className="text-[9px] text-orange-700 font-black bg-orange-100 px-1.5 rounded mt-1.5">{room?.name}</span>
                         </div>
                       </td>
                     );
@@ -820,3 +881,5 @@ const FacultyTimetable = ({ facultyId, state }: { facultyId: string; state: AppS
     </div>
   );
 };
+
+    
