@@ -123,10 +123,11 @@ export default function App() {
   }, [state]);
 
   const handleLogin = (role: UserRole) => {
+    const isFaculty = role === UserRole.FACULTY;
     const mockUser: User = {
-      id: 'u1',
-      name: role === UserRole.ADMIN ? 'HoD IT' : 'Dr. Ramesh',
-      email: role === UserRole.ADMIN ? 'hod.it@matrusri.edu.in' : 'ramesh@matrusri.edu.in',
+      id: isFaculty ? 'f2' : 'u1',
+      name: isFaculty ? 'MRS. Y. SIRISHA' : 'HoD IT',
+      email: isFaculty ? 'sirisha@matrusri.edu.in' : 'hod.it@matrusri.edu.in',
       role: role,
     };
     setCurrentUser(mockUser);
@@ -304,7 +305,9 @@ export default function App() {
         </header>
 
         <div className="animate-in fade-in duration-700">
-          {activeTab === 'dashboard' && <Dashboard state={state} />}
+          {activeTab === 'dashboard' && currentUser?.role === UserRole.ADMIN && <Dashboard state={state} />}
+          {activeTab === 'dashboard' && currentUser?.role === UserRole.FACULTY && <FacultyTimetable facultyId={currentUser.id} state={state} />}
+
           {activeTab === 'faculty' && (
             <>
               <SearchInput value={facultySearch} onChange={setFacultySearch} placeholder="Search faculty by name..." />
@@ -754,6 +757,66 @@ const PublicTimetable = ({ state }: { state: AppState }) => {
            <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest mt-4">The selected timetable is either empty or not yet published by the HoD.</p>
         </div>
       )}
+    </div>
+  );
+};
+
+const FacultyTimetable = ({ facultyId, state }: { facultyId: string; state: AppState }) => {
+  const { timetable, subjects, sections } = state;
+  const facultyTimetable = timetable.filter(entry => entry.facultyId === facultyId);
+
+  const getEntry = (day: string, period: number) => {
+    return facultyTimetable.find(t => t.day === day && t.period === period);
+  };
+
+  return (
+    <div className="bg-white border-2 border-slate-900 rounded-2xl overflow-hidden shadow-2xl">
+      <div className="px-8 py-6 border-b-2 border-slate-900 bg-slate-50/50">
+        <h3 className="font-black text-slate-900 text-lg uppercase">Your Weekly Schedule</h3>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs font-bold border-collapse">
+          <thead>
+            <tr className="border-b-2 border-slate-900 bg-slate-100">
+              <th className="p-4 border-r-2 border-slate-900 text-slate-900 uppercase w-28 bg-slate-200/50">TIMINGS</th>
+              {PERIODS.map((p, idx) => (
+                <th key={p} className={`p-4 border-r-2 last:border-r-0 border-slate-900 text-slate-900 text-[10px] ${p === LUNCH_PERIOD ? 'w-20 bg-slate-300' : ''}`}>
+                  {p === LUNCH_PERIOD ? 'LUNCH' : PERIOD_TIMES[idx]}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {DAYS.map(day => (
+              <tr key={day} className="border-b-2 last:border-b-0 border-slate-900">
+                <td className="p-4 border-r-2 border-slate-900 bg-slate-50 text-slate-900 font-black text-center">{day}</td>
+                {PERIODS.map(p => {
+                  if (p === LUNCH_PERIOD) return <td key={p} className="bg-slate-300 border-r-2 border-slate-900"></td>;
+                  const entry = getEntry(day, p);
+                  if (entry) {
+                    const subject = subjects.find(s => s.id === entry.subjectId);
+                    const section = sections.find(s => s.id === entry.sectionId);
+                    return (
+                      <td key={p} className="p-0 border-r-2 last:border-r-0 border-slate-900 min-w-[150px] h-24 text-center bg-blue-50">
+                        <div className="flex-1 flex flex-col items-center justify-center p-2 h-full">
+                          <span className="text-slate-900 font-black text-[12px] leading-tight uppercase tracking-tight">{subject?.abbreviation}</span>
+                          <span className="text-[10px] text-slate-600 font-bold mt-1">
+                            {section ? `Sec ${section.name}, Year ${section.year}` : ''}
+                          </span>
+                           {entry.batch && <span className="text-[9px] text-purple-700 font-black bg-purple-100 px-1 rounded mt-1">BATCH {entry.batch}</span>}
+                        </div>
+                      </td>
+                    );
+                  }
+                  return (
+                    <td key={p} className="p-0 border-r-2 last:border-r-0 border-slate-900 min-w-[150px] h-24 text-center bg-white"></td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 };
