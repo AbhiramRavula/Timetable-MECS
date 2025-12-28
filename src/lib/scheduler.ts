@@ -312,7 +312,7 @@ const scheduleTheoryForSection = (
     if (remaining > 0) {
       // Try again on any available slot
       for (const day of workingDays) {
-        for (const period of priorityPeriods) {
+        for (const period of PRE_LUNCH_PERIODS.concat(POST_LUNCH_PERIODS)) {
             if (remaining <= 0) break;
             if (canPlaceTheory(state, subject.id, section.id, day, period) &&
                 isSlotAvailable(state, faculty, subject.assignedFacultyId, preferredRoom.id, section.id, day, period)) {
