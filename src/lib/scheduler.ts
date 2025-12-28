@@ -65,8 +65,7 @@ const isSlotAvailable = (
   if (state.roomBusy.has(`${roomId}-${day}-${period}`)) return false;
   if (state.sectionBusy.has(`${sectionId}-${day}-${period}`)) return false;
   
-  const fac = faculty.find(f => f.id === facultyId);
-  if (fac && (state.facultyLoad.get(facultyId) || 0) >= fac.weeklyLoad) return false;
+  // Faculty workload constraint removed as per user request.
   
   return true;
 };
@@ -342,6 +341,7 @@ const fillGaps = (
   state: ScheduleState,
   subjects: Subject[],
   rooms: Room[],
+  faculty: Faculty[],
   sections: Section[]
 ) => {
   const libSubject = subjects.find(s => s.code === 'LIB');
@@ -349,8 +349,12 @@ const fillGaps = (
   const libRoom = rooms.find(r => r.name === 'LIBRARY');
   const groundRoom = rooms.find(r => r.name === 'GROUND');
 
-  if (!libSubject || !sportsSubject || !libRoom || !groundRoom) {
-    console.warn('⚠️  Gap filling disabled: Library or Sports subjects/rooms not found');
+  if (!libSubject || !libRoom) {
+    console.warn('⚠️  Library gap filling disabled: Library subject/room not found');
+    return;
+  }
+   if (!sportsSubject || !groundRoom) {
+    console.warn('⚠️  Sports gap filling disabled: Sports subject/room not found');
     return;
   }
 
@@ -360,26 +364,23 @@ const fillGaps = (
     const workingDays = getWorkingDays(section.year);
 
     for (const day of workingDays) {
-      // Fill gaps to avoid free periods between classes
-      const periodsForDay = state.timetable
-        .filter(t => t.sectionId === section.id && t.day === day)
-        .map(t => t.period)
-        .sort((a,b) => a - b);
-      
-      if(periodsForDay.length === 0) continue;
-
-      const firstPeriod = periodsForDay[0];
-      const lastPeriod = periodsForDay[periodsForDay.length - 1];
-
-      for(let p = firstPeriod; p <= lastPeriod; p++) {
-        if (p === LUNCH_PERIOD) continue;
-        if(!periodsForDay.includes(p)) {
-            // Gap found
-            const slotKey = `${section.id}-${day}-${p}`;
-            if (state.sectionBusy.has(slotKey)) continue;
-
-            addEntry(state, day, p, libSubject.id, libSubject.assignedFacultyId, libRoom.id,section.id);
+      // Fill all empty pre-lunch periods with Library
+      for (const period of PRE_LUNCH_PERIODS) {
+        if (!state.sectionBusy.has(`${section.id}-${day}-${period}`)) {
+          if (isSlotAvailable(state, faculty, libSubject.assignedFacultyId, libRoom.id, section.id, day, period)) {
+            addEntry(state, day, period, libSubject.id, libSubject.assignedFacultyId, libRoom.id, section.id);
             gapsFilled++;
+          }
+        }
+      }
+      
+      // Fill all empty post-lunch periods with Sports
+      for (const period of POST_LUNCH_PERIODS) {
+        if (!state.sectionBusy.has(`${section.id}-${day}-${period}`)) {
+           if (isSlotAvailable(state, faculty, sportsSubject.assignedFacultyId, groundRoom.id, section.id, day, period)) {
+            addEntry(state, day, period, sportsSubject.id, sportsSubject.assignedFacultyId, groundRoom.id, section.id);
+            gapsFilled++;
+          }
         }
       }
     }
@@ -428,7 +429,7 @@ export const generateTimetable = (
 
   // PHASE 3: Fill Gaps
   console.log('PHASE 3: GAP FILLING');
-  fillGaps(state, subjects, rooms, sections);
+  fillGaps(state, subjects, rooms, faculty, sections);
 
   console.log(`Generation Complete. Total Unscheduled Periods: ${totalUnscheduled}`);
 
