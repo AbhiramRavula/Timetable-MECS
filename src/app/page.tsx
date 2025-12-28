@@ -216,18 +216,18 @@ export default function App() {
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
         <div className="w-full max-w-sm">
            <div className="flex justify-center mb-6">
-                <div className="w-20 h-20 bg-primary rounded-3xl flex items-center justify-center text-white shadow-xl shadow-blue-200">
+                <div className="w-20 h-20 bg-blue-600 rounded-3xl flex items-center justify-center text-white shadow-xl shadow-blue-200">
                     <Calendar size={40} />
                 </div>
            </div>
             <h1 className="text-3xl font-black text-center text-slate-900 mb-2 tracking-tight">College Timetable Ace</h1>
             <p className="text-center text-slate-500 mb-10 font-semibold uppercase tracking-widest text-[10px]">Scheduling for Modern Institutions</p>
             <div className="space-y-4">
-                <button onClick={() => handleLogin(UserRole.ADMIN)} className="w-full py-4 px-6 bg-primary hover:bg-primary/90 text-white font-bold rounded-2xl transition-all flex items-center justify-between shadow-xl shadow-blue-100">
+                <button onClick={() => handleLogin(UserRole.ADMIN)} className="w-full py-4 px-6 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl transition-all flex items-center justify-between shadow-xl shadow-blue-100">
                     <span>Admin Login</span>
                     <ChevronRight size={20} />
                 </button>
-                <button onClick={() => handleLogin(UserRole.FACULTY)} className="w-full py-4 px-6 bg-white border-2 border-slate-100 hover:border-blue-600 text-slate-800 font-bold rounded-2xl transition-all flex items-center justify-between">
+                <button onClick={() => handleLogin(UserRole.FACULTY)} className="w-full py-4 px-6 bg-white border-2 border-slate-200 hover:border-blue-600 hover:text-blue-600 text-slate-800 font-bold rounded-2xl transition-all flex items-center justify-between">
                     <span>Faculty Login</span>
                     <ChevronRight size={20} />
                 </button>
@@ -250,7 +250,7 @@ export default function App() {
           <div className="max-w-7xl mx-auto">
             <div className="flex justify-between items-center mb-10 pb-6 border-b border-slate-100">
               <div className="flex items-center space-x-4">
-                <div className="w-12 h-12 bg-primary rounded-2xl flex items-center justify-center text-white shadow-xl shadow-blue-200"><Calendar size={24} /></div>
+                <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-blue-200"><Calendar size={24} /></div>
                 <h2 className="text-3xl font-black text-slate-900 tracking-tight">Public Schedules</h2>
               </div>
               <button onClick={() => { setActiveTab('dashboard'); setCurrentUser(null); }} className="px-6 py-2 bg-slate-900 text-white rounded-xl text-sm font-bold shadow-lg">Return to Login</button>
@@ -265,7 +265,7 @@ export default function App() {
     <div className="min-h-screen flex bg-slate-50 text-slate-900">
       <aside className="w-72 bg-white border-r border-slate-200 flex flex-col fixed inset-y-0 shadow-sm z-40">
         <div className="p-8 flex items-center space-x-3 mb-4">
-          <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white shadow-lg"><Calendar size={20} /></div>
+          <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white shadow-lg"><Calendar size={20} /></div>
           <span className="text-xl font-black text-slate-900 tracking-tight">Timetable Ace</span>
         </div>
         <nav className="flex-1 px-4 space-y-1.5 overflow-y-auto">
@@ -285,7 +285,7 @@ export default function App() {
         </nav>
         <div className="p-6 border-t border-slate-100">
           <div className="bg-slate-50 p-4 rounded-2xl flex items-center space-x-3 mb-6">
-            <div className="w-10 h-10 bg-blue-100 text-primary rounded-full flex items-center justify-center font-bold text-lg">{currentUser?.name?.charAt(0)}</div>
+            <div className="w-10 h-10 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-bold text-lg">{currentUser?.name?.charAt(0)}</div>
             <div className="overflow-hidden">
               <p className="text-sm font-black text-slate-900 truncate">{currentUser?.name}</p>
               <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">{currentUser?.role}</p>
