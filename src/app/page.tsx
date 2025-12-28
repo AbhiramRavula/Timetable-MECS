@@ -220,7 +220,7 @@ export default function App() {
                     <Calendar size={40} />
                 </div>
            </div>
-            <h1 className="text-3xl font-black text-center text-slate-900 mb-2 tracking-tight">College Timetable Ace</h1>
+            <h1 className="text-3xl font-black text-center text-slate-900 mb-2 tracking-tight">College Timetable</h1>
             <p className="text-center text-slate-500 mb-10 font-semibold uppercase tracking-widest text-[10px]">Scheduling for Modern Institutions</p>
             <div className="space-y-4">
                 <button onClick={() => handleLogin(UserRole.ADMIN)} className="w-full py-4 px-6 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl transition-all flex items-center justify-between shadow-xl shadow-blue-100">
