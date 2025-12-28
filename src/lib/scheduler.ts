@@ -9,22 +9,20 @@ import { DAYS, PERIODS, LUNCH_PERIOD } from './mock-data';
 const PRE_LUNCH_PERIODS = [1, 2, 3, 4];
 const POST_LUNCH_PERIODS = [6, 7];
 const FOURTH_YEAR_HOLIDAYS = ['FRI', 'SAT'];
-
-const STUDENT_STRENGTHS: Record<string, number> = {
-  's1': 69, 's2': 62, 's3': 63, 's4': 60, 's5': 61
-};
+const MAX_LIBRARY_PERIODS_PER_WEEK = 4;
 
 // ============================================================================
 // TYPES
 // ============================================================================
 interface ScheduleState {
   timetable: TimetableEntry[];
-  facultyBusy: Set<string>;
-  roomBusy: Set<string>;
-  sectionBusy: Set<string>;
-  facultyLoad: Map<string, number>;
-  subjectDayCount: Map<string, number>;
+  facultyBusy: Set<string>; // "facultyId-day-period"
+  roomBusy: Set<string>; // "roomId-day-period"
+  sectionBusy: Set<string>; // "sectionId-day-period"
+  facultyLoad: Map<string, number>; // facultyId -> count
+  subjectDayCount: Map<string, number>; // "subjectId-sectionId-day" -> count
   labDayUsage: Map<string, Set<string>>; // "sectionId-day" -> Set of lab subject IDs
+  libraryCount: Map<string, number>; // sectionId -> count
 }
 
 // ============================================================================
@@ -46,7 +44,7 @@ const isHoliday = (year: number, day: string): boolean =>
 const getWorkingDays = (year: number): string[] => 
   DAYS.filter(day => !isHoliday(year, day));
 
-// =================================a===========================================
+// ============================================================================
 // CONSTRAINT VALIDATION
 // ============================================================================
 
@@ -73,8 +71,8 @@ const canPlaceTheory = (
   sectionId: string,
   day: string,
 ): boolean => {
-  const dayKey = `${subjectId}-${sectionId}-${day}`;
   // Allow a maximum of 2 periods of the same theory subject on one day
+  const dayKey = `${subjectId}-${sectionId}-${day}`;
   if ((state.subjectDayCount.get(dayKey) || 0) >= 2) return false;
 
   return true;
@@ -112,17 +110,20 @@ const addEntry = (
   
   const dayKey = `${subjectId}-${sectionId}-${day}`;
   state.subjectDayCount.set(dayKey, (state.subjectDayCount.get(dayKey) || 0) + 1);
+  
+  if (subjectId.includes('common_lib')) {
+      state.libraryCount.set(sectionId, (state.libraryCount.get(sectionId) || 0) + 1);
+  }
 };
 
 // ============================================================================
-// ADVANCED LAB SCHEDULING (ROTATION PATTERN)
+// LAB SCHEDULING
 // ============================================================================
 
 const scheduleLabsForSection = (
   state: ScheduleState,
   subjects: Subject[],
   rooms: Room[],
-  faculty: Faculty[],
   section: Section
 ): number => {
   const labSubjects = subjects.filter(
@@ -146,27 +147,21 @@ const scheduleLabsForSection = (
   }
 
   const periodsPerLab = labSubjects[0]?.periodsPerWeek || 3;
-  // A lab session is 2 periods long. So 3 periods/week means 1.5 sessions. Let's schedule 1 full session (2p) + 1 single period.
-  // This seems wrong based on user feedback. Let's assume labs are always 2 periods. `periodsPerWeek: 3` for a lab is strange.
-  // Let's make labs strictly 2 periods. The data might be odd.
-  const numLabSessions = Math.floor(periodsPerLab / 2); // Schedule 2-period blocks
+  // Labs are typically 2 or 3 periods. We will schedule them in 2-period blocks.
+  const numLabSessions = Math.floor(periodsPerLab / 2);
 
   const preferredBlocks: number[][] = [[1, 2], [3, 4], [6, 7]];
-  
   let scheduledPeriods = 0;
 
-  // Try to schedule all lab sessions for each lab subject
   for (const lab of labSubjects) {
-      let remainingSessions = numLabSessions;
-      
       for (let i = 0; i < numLabSessions; i++) {
         let sessionScheduled = false;
         for (const day of shuffle([...workingDays])) {
           if (sessionScheduled) break;
           
           const dayKey = `${section.id}-${day}`;
-          if (state.labDayUsage.has(dayKey) && state.labDayUsage.get(dayKey)!.has(lab.id)) {
-            continue; // This lab already happened on this day
+          if (state.labDayUsage.has(dayKey) && state.labDayUsage.get(dayKey)!.size > 0) {
+            continue; // Day already has a lab block
           }
 
           for (const [p1, p2] of preferredBlocks) {
@@ -180,8 +175,7 @@ const scheduleLabsForSection = (
                 const currentLab = labSubjects[(labSubjects.indexOf(lab) + batchIdx) % numBatches];
                 let foundRoom = false;
                 for (const room of labRooms) {
-                    if (roomAssignments.some(r => r.id === room.id)) continue;
-                    if (facultyAssignments.includes(currentLab.assignedFacultyId)) continue;
+                    if (roomAssignments.some(r => r.id === room.id) || facultyAssignments.includes(currentLab.assignedFacultyId)) continue;
                     
                     if (isSlotAvailable(state, currentLab.assignedFacultyId, room.id, section.id, day, p1) &&
                         isSlotAvailable(state, currentLab.assignedFacultyId, room.id, section.id, day, p2)) 
@@ -207,12 +201,11 @@ const scheduleLabsForSection = (
                   addEntry(state, day, p1, currentLab.id, currentLab.assignedFacultyId, room.id, section.id, batchName);
                   addEntry(state, day, p2, currentLab.id, currentLab.assignedFacultyId, room.id, section.id, batchName);
                   scheduledPeriods += 2;
-                  
-                  if (!state.labDayUsage.has(dayKey)) state.labDayUsage.set(dayKey, new Set());
-                  state.labDayUsage.get(dayKey)!.add(currentLab.id);
               }
               sessionScheduled = true;
-              remainingSessions--;
+              
+              if (!state.labDayUsage.has(dayKey)) state.labDayUsage.set(dayKey, new Set());
+              labSubjects.forEach(l => state.labDayUsage.get(dayKey)!.add(l.id));
             }
           }
         }
@@ -224,7 +217,7 @@ const scheduleLabsForSection = (
 };
 
 // ============================================================================
-// INTELLIGENT THEORY SCHEDULING
+// AGGRESSIVE THEORY SCHEDULING (NEW)
 // ============================================================================
 
 const scheduleTheoryForSection = (
@@ -245,39 +238,46 @@ const scheduleTheoryForSection = (
   if (!preferredRoom) return theorySubjects.reduce((sum, s) => sum + s.periodsPerWeek, 0);
 
   const workingDays = getWorkingDays(section.year);
-  let unscheduledPeriods = 0;
   
-  const allPeriods = shuffle([...PRE_LUNCH_PERIODS, ...POST_LUNCH_PERIODS]);
-  
+  // Create a flat list of all theory periods needed
   const subjectQueue = theorySubjects.flatMap(s => Array(s.periodsPerWeek).fill(s));
   shuffle(subjectQueue);
 
-  for (const subject of subjectQueue) {
-    let placed = false;
-    for (const day of shuffle([...workingDays])) {
-      if (placed) break;
-      if (!canPlaceTheory(state, subject.id, section.id, day)) continue;
+  let unscheduledCount = subjectQueue.length;
 
-      for (const period of allPeriods) {
-        if (isSlotAvailable(state, subject.assignedFacultyId, preferredRoom.id, section.id, day, period)) {
-          addEntry(state, day, period, subject.id, subject.assignedFacultyId, preferredRoom.id, section.id);
-          placed = true;
-          break; 
-        }
+  // Systematic First-Fit approach
+  for (const day of workingDays) {
+      const allDayPeriods = shuffle([...PRE_LUNCH_PERIODS, ...POST_LUNCH_PERIODS]);
+      for (const period of allDayPeriods) {
+          if (subjectQueue.length === 0) break; // All subjects scheduled
+
+          // Check if section is already busy
+          if (state.sectionBusy.has(`${section.id}-${day}-${period}`)) continue;
+          
+          // Find a subject that can be placed here
+          for (let i = 0; i < subjectQueue.length; i++) {
+              const subject = subjectQueue[i];
+              
+              if (canPlaceTheory(state, subject.id, section.id, day) &&
+                  isSlotAvailable(state, subject.assignedFacultyId, preferredRoom.id, section.id, day, period)) 
+              {
+                  addEntry(state, day, period, subject.id, subject.assignedFacultyId, preferredRoom.id, section.id);
+                  subjectQueue.splice(i, 1); // Remove from queue
+                  unscheduledCount--;
+                  break; // Move to next period
+              }
+          }
       }
-    }
-    if (!placed) {
-      unscheduledPeriods++;
-    }
+      if (subjectQueue.length === 0) break;
   }
   
-  return unscheduledPeriods;
+  return unscheduledCount;
 };
 
-// ============================================================================
-// STRATEGIC GAP FILLING (NEW LOGIC)
-// ============================================================================
 
+// ============================================================================
+// STRATEGIC GAP FILLING
+// ============================================================================
 const fillGapsAndCompact = (
   state: ScheduleState,
   subjects: Subject[],
@@ -293,39 +293,29 @@ const fillGapsAndCompact = (
     console.warn('⚠️  Gap filling disabled: Library or Sports subjects/rooms not found');
     return;
   }
-  
-  const MAX_LIBRARY_PERIODS_PER_WEEK = 4;
 
   for (const section of sections) {
     const workingDays = getWorkingDays(section.year);
-    let libraryPeriodsThisWeek = 0;
-    
-    for (const day of workingDays) {
-      const scheduledPeriods = state.timetable
-        .filter(t => t.sectionId === section.id && t.day === day)
-        .map(t => t.period)
-        .sort((a,b)=> a-b);
-      
-      if (scheduledPeriods.length === 0) continue;
 
-      const firstPeriod = scheduledPeriods[0];
-      const lastPeriod = scheduledPeriods[scheduledPeriods.length-1];
-      
-      // 1. Fill gaps between first and last scheduled period
-      for(let p = firstPeriod + 1; p < lastPeriod; p++) {
-        if (p === LUNCH_PERIOD || scheduledPeriods.includes(p)) continue;
-        
-        if (libraryPeriodsThisWeek < MAX_LIBRARY_PERIODS_PER_WEEK && isSlotAvailable(state, libSubject.assignedFacultyId, libRoom.id, section.id, day, p)) {
-            addEntry(state, day, p, libSubject.id, libSubject.assignedFacultyId, libRoom.id, section.id);
-            libraryPeriodsThisWeek++;
-        } else if (isSlotAvailable(state, sportsSubject.assignedFacultyId, groundRoom.id, section.id, day, p)) {
-            addEntry(state, day, p, sportsSubject.id, sportsSubject.assignedFacultyId, groundRoom.id, section.id);
+    for (const day of workingDays) {
+      const allDayPeriods = [...PRE_LUNCH_PERIODS, ...POST_LUNCH_PERIODS];
+
+      for (const period of allDayPeriods) {
+        // If the slot is empty, try to fill it
+        if (!state.sectionBusy.has(`${section.id}-${day}-${period}`)) {
+          
+          // Try to fill with Library first, respecting the weekly limit
+          if ((state.libraryCount.get(section.id) || 0) < MAX_LIBRARY_PERIODS_PER_WEEK && 
+              isSlotAvailable(state, libSubject.assignedFacultyId, libRoom.id, section.id, day, period)) {
+            addEntry(state, day, period, libSubject.id, libSubject.assignedFacultyId, libRoom.id, section.id);
+          }
+          // Else, try to fill with Sports
+          else if (isSlotAvailable(state, sportsSubject.assignedFacultyId, groundRoom.id, section.id, day, period)) {
+            addEntry(state, day, period, sportsSubject.id, sportsSubject.assignedFacultyId, groundRoom.id, section.id);
+          }
         }
       }
     }
-
-    // 2. If a day has very few classes, try to move them. (Complex logic, defer for now)
-    // For now, the compaction happens naturally by filling gaps. The scheduler should be run again if it's too sparse.
   }
 };
 
@@ -350,10 +340,12 @@ export const generateTimetable = (
     sectionBusy: new Set(),
     facultyLoad: new Map(),
     subjectDayCount: new Map(),
-    labDayUsage: new Map()
+    labDayUsage: new Map(),
+    libraryCount: new Map()
   };
 
   faculty.forEach(f => state.facultyLoad.set(f.id, 0));
+  sections.forEach(s => state.libraryCount.set(s.id, 0));
 
   const sortedSections = [...sections].sort((a, b) => b.year - a.year);
   let totalUnscheduled = 0;
@@ -361,23 +353,20 @@ export const generateTimetable = (
   // PHASE 1: Labs (Hardest Constraint)
   console.log('PHASE 1: LAB SCHEDULING');
   for (const section of sortedSections) {
-    totalUnscheduled += scheduleLabsForSection(state, subjects, rooms, faculty, section);
+    totalUnscheduled += scheduleLabsForSection(state, subjects, rooms, section);
   }
 
   // PHASE 2: Theory (Core Academic)
-  console.log('PHASE 2: THEORY SCHEDULING');
+  console.log('PHASE 2: THEORY SCHEDULING (AGGRESSIVE PACKING)');
   for (const section of sortedSections) {
     totalUnscheduled += scheduleTheoryForSection(state, subjects, rooms, section);
   }
 
-  // PHASE 3: Fill Gaps and Compact Schedule
+  // PHASE 3: Fill Remaining Gaps
   console.log('PHASE 3: COMPACTING & GAP FILLING');
   fillGapsAndCompact(state, subjects, rooms, sections);
 
   console.log(`Generation Complete. Total Unscheduled Periods: ${totalUnscheduled}`);
-
-  // Final check: if a day has only 1 or 2 periods, it could be considered a "bad day".
-  // For now, this is acceptable, but a future iteration could try to re-schedule those.
   
   return state.timetable.sort((a,b) => DAYS.indexOf(a.day) - DAYS.indexOf(b.day) || a.period - b.period);
 };
