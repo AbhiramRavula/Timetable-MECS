@@ -21,6 +21,8 @@ import {
   UserCheck,
   Download,
   CheckCircle2,
+  ChevronsLeft,
+  Menu,
 } from 'lucide-react';
 import type { 
   User, 
@@ -46,20 +48,23 @@ import {
   PERIOD_TIMES
 } from '@/lib/mock-data';
 import { generateTimetable } from '@/lib/scheduler';
+import { cn } from '@/lib/utils';
 
 // --- Sub-components ---
 
-const SidebarItem = ({ icon: Icon, label, active, onClick }: { icon: React.ElementType, label: string, active: boolean, onClick: () => void }) => (
+const SidebarItem = ({ icon: Icon, label, active, onClick, isCollapsed }: { icon: React.ElementType, label: string, active: boolean, onClick: () => void, isCollapsed: boolean }) => (
   <button
     onClick={onClick}
-    className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${
-      active 
-        ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' 
-        : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-    }`}
+    className={cn(
+        'w-full flex items-center space-x-3 py-3 rounded-xl transition-all',
+        isCollapsed ? 'justify-center px-3' : 'px-4',
+        active 
+          ? 'bg-primary text-primary-foreground shadow-lg' 
+          : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
+      )}
   >
     <Icon size={20} />
-    <span className="font-semibold text-sm">{label}</span>
+    {!isCollapsed && <span className="font-semibold text-sm">{label}</span>}
   </button>
 );
 
@@ -91,6 +96,7 @@ const SearchInput = ({ value, onChange, placeholder }: { value: string, onChange
 export default function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   
   const [state, setState] = useState<AppState>({
     users: [],
@@ -120,7 +126,21 @@ export default function App() {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (parsed.timetable) setState(parsed);
+        if (parsed.timetable) {
+          // Make sure all initial data parts are present, falling back to mock if not
+          const initialState: AppState = {
+            users: parsed.users || [],
+            faculty: parsed.faculty || INITIAL_FACULTY,
+            subjects: parsed.subjects || INITIAL_SUBJECTS,
+            rooms: parsed.rooms || INITIAL_ROOMS,
+            sections: parsed.sections || INITIAL_SECTIONS,
+            students: parsed.students || INITIAL_STUDENTS,
+            timetable: parsed.timetable || [],
+            logs: parsed.logs || [],
+            isPublished: parsed.isPublished || false,
+          };
+          setState(initialState);
+        }
       } catch (e) { console.error("Failed to parse saved state", e); }
     }
   }, []);
@@ -299,7 +319,7 @@ export default function App() {
               <div className="max-w-7xl mx-auto">
                 <div className="flex justify-between items-center mb-10 pb-6 border-b border-slate-100">
                   <div className="flex items-center space-x-4">
-                    <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-blue-200"><Calendar size={24} /></div>
+                    <div className="w-12 h-12 bg-primary rounded-2xl flex items-center justify-center text-white shadow-xl shadow-blue-200"><Calendar size={24} /></div>
                     <h2 className="text-3xl font-black text-slate-900 tracking-tight">Public Schedules</h2>
                   </div>
                   <button onClick={() => { setLoginMode(null); }} className="px-6 py-2 bg-slate-900 text-white rounded-xl text-sm font-bold shadow-lg">Return to Login</button>
@@ -314,18 +334,18 @@ export default function App() {
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
         <div className="w-full max-w-sm">
            <div className="flex justify-center mb-6">
-                <div className="w-20 h-20 bg-blue-600 rounded-3xl flex items-center justify-center text-white shadow-xl shadow-blue-200">
+                <div className="w-20 h-20 bg-primary rounded-3xl flex items-center justify-center text-white shadow-xl shadow-blue-200">
                     <Calendar size={40} />
                 </div>
            </div>
             <h1 className="text-3xl font-black text-center text-slate-900 mb-2 tracking-tight">College Timetable Ace</h1>
             <p className="text-center text-slate-500 mb-10 font-semibold uppercase tracking-widest text-[10px]">Scheduling for Modern Institutions</p>
             <div className="space-y-4">
-                <button onClick={handleAdminLogin} className="w-full py-4 px-6 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl transition-all flex items-center justify-between shadow-xl shadow-blue-100">
+                <button onClick={handleAdminLogin} className="w-full py-4 px-6 bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-2xl transition-all flex items-center justify-between shadow-xl shadow-blue-100">
                     <span>Admin Login</span>
                     <ChevronRight size={20} />
                 </button>
-                <button onClick={() => setLoginMode('faculty_select')} className="w-full py-4 px-6 bg-white border-2 border-slate-200 hover:border-emerald-600 hover:text-emerald-600 text-slate-800 font-bold rounded-2xl transition-all flex items-center justify-between">
+                <button onClick={() => setLoginMode('faculty_select')} className="w-full py-4 px-6 bg-white border-2 border-input hover:border-emerald-600 hover:text-emerald-600 text-slate-800 font-bold rounded-2xl transition-all flex items-center justify-between">
                     <span>Faculty Login</span>
                     <ChevronRight size={20} />
                 </button>
@@ -343,52 +363,64 @@ export default function App() {
   }
   
   return (
-    <div className="min-h-screen flex bg-slate-50 text-slate-900">
+    <div className="min-h-screen flex bg-background text-foreground">
       <style>{`
         @media print {
           body * { visibility: hidden; }
           #printable, #printable * { visibility: visible; }
-          #printable { position: absolute; left: 0; top: 0; width: 100%; }
+          #printable { position: absolute; left: 0; top: 0; width: 100%; overflow: visible; }
           aside, header, .noprint { display: none !important; }
-          main { margin-left: 0 !important; padding: 0 !important; }
+          main { margin-left: 0 !important; padding: 0 !important; width: 100% !important; }
+          .break-inside-avoid { break-inside: avoid; }
         }
       `}</style>
-      <aside className="w-72 bg-white border-r border-slate-200 flex flex-col fixed inset-y-0 shadow-sm z-40 noprint">
-        <div className="p-8 flex items-center space-x-3 mb-4">
-          <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white shadow-lg"><Calendar size={20} /></div>
-          <span className="text-xl font-black text-slate-900 tracking-tight">Timetable Ace</span>
+      <aside className={cn(
+          "bg-sidebar border-r border-sidebar-border flex flex-col fixed inset-y-0 shadow-sm z-40 noprint transition-all duration-300 ease-in-out",
+          isSidebarCollapsed ? "w-20" : "w-72"
+        )}>
+        <div className={cn("p-4 flex items-center justify-between mb-4", isSidebarCollapsed ? "px-6" : "px-8")}>
+          {!isSidebarCollapsed && <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-primary-foreground shadow-lg"><Calendar size={20} /></div>
+              <span className="text-xl font-black text-sidebar-foreground tracking-tight">Timetable Ace</span>
+          </div>}
+          <button onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)} className="p-2 text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent rounded-lg">
+             {isSidebarCollapsed ? <Menu size={20} /> : <ChevronsLeft size={20} />}
+          </button>
         </div>
         <nav className="flex-1 px-4 space-y-1.5 overflow-y-auto">
-          <SidebarItem icon={LayoutDashboard} label="Dashboard" active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} />
+          <SidebarItem icon={LayoutDashboard} label="Dashboard" active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} isCollapsed={isSidebarCollapsed} />
           {currentUser?.role === UserRole.ADMIN && (
             <>
-              <div className="pt-6 pb-2 px-4"><span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Department Setup</span></div>
-              <SidebarItem icon={Users} label="Faculty" active={activeTab === 'faculty'} onClick={() => setActiveTab('faculty')} />
-              <SidebarItem icon={BookOpen} label="Subjects" active={activeTab === 'subjects'} onClick={() => setActiveTab('subjects')} />
-              <SidebarItem icon={DoorOpen} label="Rooms" active={activeTab === 'rooms'} onClick={() => setActiveTab('rooms')} />
-              <SidebarItem icon={GraduationCap} label="Students" active={activeTab === 'students'} onClick={() => setActiveTab('students')} />
-              <div className="pt-6 pb-2 px-4"><span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Operations</span></div>
-              <SidebarItem icon={Calendar} label="Generate" active={activeTab === 'generate'} onClick={() => setActiveTab('generate')} />
-              <SidebarItem icon={History} label="Audit Logs" active={activeTab === 'logs'} onClick={() => setActiveTab('logs')} />
+              <div className="pt-6 pb-2 px-4"><span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{!isSidebarCollapsed && "Department Setup"}</span></div>
+              <SidebarItem icon={Users} label="Faculty" active={activeTab === 'faculty'} onClick={() => setActiveTab('faculty')} isCollapsed={isSidebarCollapsed} />
+              <SidebarItem icon={BookOpen} label="Subjects" active={activeTab === 'subjects'} onClick={() => setActiveTab('subjects')} isCollapsed={isSidebarCollapsed} />
+              <SidebarItem icon={DoorOpen} label="Rooms" active={activeTab === 'rooms'} onClick={() => setActiveTab('rooms')} isCollapsed={isSidebarCollapsed} />
+              <SidebarItem icon={GraduationCap} label="Students" active={activeTab === 'students'} onClick={() => setActiveTab('students')} isCollapsed={isSidebarCollapsed} />
+              <div className="pt-6 pb-2 px-4"><span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{!isSidebarCollapsed && "Operations"}</span></div>
+              <SidebarItem icon={Calendar} label="Generate" active={activeTab === 'generate'} onClick={() => setActiveTab('generate')} isCollapsed={isSidebarCollapsed} />
+              <SidebarItem icon={History} label="Audit Logs" active={activeTab === 'logs'} onClick={() => setActiveTab('logs')} isCollapsed={isSidebarCollapsed} />
             </>
           )}
         </nav>
-        <div className="p-6 border-t border-slate-100">
-          <div className="bg-slate-50 p-4 rounded-2xl flex items-center space-x-3 mb-6">
-            <div className="w-10 h-10 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-bold text-lg">{currentUser?.name?.charAt(0)}</div>
-            <div className="overflow-hidden">
-              <p className="text-sm font-black text-slate-900 truncate">{currentUser?.name}</p>
-              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">{currentUser?.role}</p>
-            </div>
+        <div className="p-4 border-t border-sidebar-border">
+          <div className={cn("p-3 rounded-2xl flex items-center space-x-3 mb-4", isSidebarCollapsed ? '' : 'bg-sidebar-accent')}>
+            <div className="w-10 h-10 bg-primary/10 text-primary rounded-full flex items-center justify-center font-bold text-lg shrink-0">{currentUser?.name?.charAt(0)}</div>
+            {!isSidebarCollapsed && <div className="overflow-hidden">
+              <p className="text-sm font-black text-sidebar-accent-foreground truncate">{currentUser?.name}</p>
+              <p className="text-[10px] text-sidebar-accent-foreground/70 font-bold uppercase tracking-widest">{currentUser?.role}</p>
+            </div>}
           </div>
           <button onClick={handleLogout} className="w-full flex items-center justify-center space-x-2 py-3.5 text-red-500 hover:bg-red-50 rounded-xl transition-all font-bold text-sm">
             <LogOut size={18} />
-            <span>Sign Out</span>
+            {!isSidebarCollapsed && <span>Sign Out</span>}
           </button>
         </div>
       </aside>
 
-      <main className="flex-1 ml-72 p-12 min-h-screen">
+      <main className={cn(
+        "flex-1 p-8 min-h-screen transition-all duration-300 ease-in-out",
+        isSidebarCollapsed ? "ml-20" : "ml-72"
+        )}>
         <header className="mb-12 flex justify-between items-center noprint">
           <h2 className="text-4xl font-black text-slate-900 capitalize tracking-tight">{activeTab.replace('-', ' ')}</h2>
         </header>
@@ -470,7 +502,7 @@ export default function App() {
                     <CheckCircle2 size={18} />
                     <span>Approve & Publish</span>
                   </button>
-                  <button onClick={onGenerate} className="flex items-center space-x-2 px-8 py-3.5 bg-blue-600 text-white hover:bg-blue-700 rounded-2xl font-black shadow-xl shadow-blue-100 transition-all text-sm">
+                  <button onClick={onGenerate} className="flex items-center space-x-2 px-8 py-3.5 bg-primary text-primary-foreground hover:bg-primary/90 rounded-2xl font-black shadow-xl shadow-blue-100 transition-all text-sm">
                     <Plus size={18} />
                     <span>Execute Engine</span>
                   </button>
@@ -504,7 +536,7 @@ export default function App() {
 // --- List View Components ---
 
 const FacultyList = ({ faculty, onEdit, onDelete, onAdd }: { faculty: Faculty[], onEdit: (f: Faculty) => void, onDelete: (id: string) => void, onAdd: () => void }) => (
-  <Card title="Faculty directory" extra={<button onClick={onAdd} className="bg-blue-600 text-white px-5 py-2.5 rounded-xl text-xs font-black shadow-lg shadow-blue-100 flex items-center uppercase tracking-widest"><Plus size={16} className="mr-2" /> Add Faculty</button>}>
+  <Card title="Faculty directory" extra={<button onClick={onAdd} className="bg-primary text-primary-foreground px-5 py-2.5 rounded-xl text-xs font-black shadow-lg shadow-blue-100 flex items-center uppercase tracking-widest"><Plus size={16} className="mr-2" /> Add Faculty</button>}>
     <div className="overflow-x-auto">
       <table className="w-full text-left">
         <thead className="text-[10px] uppercase text-slate-500 font-black border-b border-slate-100 tracking-widest bg-slate-50/50">
@@ -533,7 +565,7 @@ const FacultyList = ({ faculty, onEdit, onDelete, onAdd }: { faculty: Faculty[],
 );
 
 const SubjectList = ({ subjects, onEdit, onDelete, onAdd }: { subjects: Subject[], onEdit: (s: Subject) => void, onDelete: (id: string) => void, onAdd: () => void }) => (
-  <Card title="Course management" extra={<button onClick={onAdd} className="bg-blue-600 text-white px-5 py-2.5 rounded-xl text-xs font-black shadow-lg shadow-blue-100 flex items-center uppercase tracking-widest"><Plus size={16} className="mr-2" /> Add Course</button>}>
+  <Card title="Course management" extra={<button onClick={onAdd} className="bg-primary text-primary-foreground px-5 py-2.5 rounded-xl text-xs font-black shadow-lg shadow-blue-100 flex items-center uppercase tracking-widest"><Plus size={16} className="mr-2" /> Add Course</button>}>
     <div className="overflow-x-auto">
       <table className="w-full text-left">
         <thead className="text-[10px] uppercase text-slate-500 font-black border-b border-slate-100 tracking-widest bg-slate-50/50">
@@ -542,7 +574,7 @@ const SubjectList = ({ subjects, onEdit, onDelete, onAdd }: { subjects: Subject[
         <tbody className="divide-y divide-slate-100 text-sm">
           {subjects.map((s: Subject) => (
             <tr key={s.id} className="hover:bg-slate-50/50 transition-colors">
-              <td className="px-4 py-5 font-black text-blue-600 tracking-widest">{s.code}</td>
+              <td className="px-4 py-5 font-black text-primary tracking-widest">{s.code}</td>
               <td className="px-4 py-5 text-slate-900 font-bold uppercase tracking-tight">{s.name} <span className="text-[10px] text-slate-400 font-black">({s.abbreviation})</span></td>
               <td className="px-4 py-5 text-center">
                 <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${s.type === SubjectType.THEORY ? 'bg-orange-50 text-orange-700' : 'bg-purple-50 text-purple-700'}`}>{s.type}</span>
@@ -562,7 +594,7 @@ const SubjectList = ({ subjects, onEdit, onDelete, onAdd }: { subjects: Subject[
 );
 
 const RoomList = ({ rooms, onEdit, onDelete, onAdd }: { rooms: Room[], onEdit: (r: Room) => void, onDelete: (id: string) => void, onAdd: () => void }) => (
-  <Card title="Infrastructure: Rooms" extra={<button onClick={onAdd} className="bg-blue-600 text-white px-5 py-2.5 rounded-xl text-xs font-black shadow-lg shadow-blue-100 flex items-center uppercase tracking-widest"><Plus size={16} className="mr-2" /> Add Room</button>}>
+  <Card title="Infrastructure: Rooms" extra={<button onClick={onAdd} className="bg-primary text-primary-foreground px-5 py-2.5 rounded-xl text-xs font-black shadow-lg shadow-blue-100 flex items-center uppercase tracking-widest"><Plus size={16} className="mr-2" /> Add Room</button>}>
     <div className="overflow-x-auto">
       <table className="w-full text-left">
         <thead className="text-[10px] uppercase text-slate-500 font-black border-b border-slate-100 tracking-widest bg-slate-50/50">
@@ -591,7 +623,7 @@ const RoomList = ({ rooms, onEdit, onDelete, onAdd }: { rooms: Room[], onEdit: (
 );
 
 const StudentList = ({ students, sections, onEdit, onDelete, onAdd }: { students: StudentGroup[], sections: Section[], onEdit: (s: StudentGroup) => void, onDelete: (id: string) => void, onAdd: () => void }) => (
-  <Card title="Student metadata" extra={<button onClick={onAdd} className="bg-blue-600 text-white px-5 py-2.5 rounded-xl text-xs font-black shadow-lg shadow-blue-100 flex items-center uppercase tracking-widest"><Plus size={16} className="mr-2" /> Add Record</button>}>
+  <Card title="Student metadata" extra={<button onClick={onAdd} className="bg-primary text-primary-foreground px-5 py-2.5 rounded-xl text-xs font-black shadow-lg shadow-blue-100 flex items-center uppercase tracking-widest"><Plus size={16} className="mr-2" /> Add Record</button>}>
     <div className="overflow-x-auto">
       <table className="w-full text-left">
         <thead className="text-[10px] uppercase text-slate-500 font-black border-b border-slate-100 tracking-widest bg-slate-50/50">
@@ -721,7 +753,7 @@ const SectionTimetable = ({ section, timetable, subjects, rooms, faculty, onEdit
               return (
                 <tr key={s.id} className="uppercase hover:bg-slate-50 transition-colors">
                   <td className="p-3 border-r-2 border-slate-900 text-center text-slate-500 font-black">{idx + 1}</td>
-                  <td className="p-3 border-r-2 border-slate-900 text-center font-black text-blue-700 tracking-tighter">{s.code}</td>
+                  <td className="p-3 border-r-2 border-slate-900 text-center font-black text-primary tracking-tighter">{s.code}</td>
                   <td className="p-3 border-r-2 border-slate-900 text-left px-5 text-slate-900 font-black tracking-tight">{s.name}</td>
                   <td className="p-3 border-r-2 border-slate-900 text-center font-black text-slate-800">{s.abbreviation}</td>
                   <td className="p-3 text-left px-5 font-black text-slate-700">{fac?.name || 'N/A'}</td>
@@ -777,7 +809,7 @@ const EntityModal = ({ modal, onClose, onSave, sections }: { modal: {type: strin
                 </div>
                 <div className="p-10 border-t border-slate-100 flex justify-end space-x-4 bg-slate-50/50">
                     <button onClick={onClose} className="px-6 py-3 font-bold text-slate-500 uppercase text-[11px] tracking-widest">Discard</button>
-                    <button onClick={() => onSave(formData)} className="px-10 py-3.5 bg-blue-600 text-white font-black rounded-2xl text-[11px] uppercase tracking-widest shadow-xl shadow-blue-100 active:scale-95 transition-all">Save Changes</button>
+                    <button onClick={() => onSave(formData)} className="px-10 py-3.5 bg-primary text-primary-foreground font-black rounded-2xl text-[11px] uppercase tracking-widest shadow-xl shadow-blue-100 active:scale-95 transition-all">Save Changes</button>
                 </div>
             </div>
         </div>
@@ -802,7 +834,7 @@ const EditEntryModal = ({ editing, facultyList, subjectList, onClose, onSave, on
                     <button onClick={() => onRemove(formData.id)} className="text-red-500 font-black uppercase text-[10px] tracking-widest px-4 hover:bg-red-50 rounded-xl transition-all">Clear Slot</button>
                     <div className="flex space-x-3">
                         <button onClick={onClose} className="px-6 py-3 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Cancel</button>
-                        <button onClick={() => onSave(formData)} className="px-8 py-3.5 bg-blue-600 text-white font-black rounded-2xl text-[10px] uppercase tracking-widest shadow-xl shadow-blue-100 active:scale-95 transition-all">Update</button>
+                        <button onClick={() => onSave(formData)} className="px-8 py-3.5 bg-primary text-primary-foreground font-black rounded-2xl text-[10px] uppercase tracking-widest shadow-xl shadow-blue-100 active:scale-95 transition-all">Update</button>
                     </div>
                 </div>
             </div>
@@ -841,7 +873,7 @@ const PublicTimetable = ({ state }: { state: AppState }) => {
           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Curriculum Year</label>
           <div className="flex gap-2">
             {[2, 3, 4].map(y => (
-              <button key={y} onClick={() => setYear(y)} className={`px-8 py-3.5 rounded-2xl font-black transition-all text-xs uppercase tracking-widest ${year === y ? 'bg-blue-600 text-white shadow-xl shadow-blue-200 scale-105' : 'bg-white border border-slate-200 text-slate-400 hover:border-blue-300'}`}>Year {y}</button>
+              <button key={y} onClick={() => setYear(y)} className={`px-8 py-3.5 rounded-2xl font-black transition-all text-xs uppercase tracking-widest ${year === y ? 'bg-primary text-primary-foreground shadow-xl shadow-blue-200 scale-105' : 'bg-white border border-input text-slate-400 hover:border-blue-300'}`}>Year {y}</button>
             ))}
           </div>
         </div>
@@ -849,7 +881,7 @@ const PublicTimetable = ({ state }: { state: AppState }) => {
           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Section Group</label>
           <div className="flex gap-2">
             {['A', 'B'].map(s => (
-              <button key={s} onClick={() => setSectionName(s)} className={`px-8 py-3.5 rounded-2xl font-black transition-all text-xs uppercase tracking-widest ${section === s ? 'bg-blue-600 text-white shadow-xl shadow-blue-200 scale-105' : 'bg-white border border-slate-200 text-slate-400 hover:border-blue-300'}`}>Section {s}</button>
+              <button key={s} onClick={() => setSectionName(s)} className={`px-8 py-3.5 rounded-2xl font-black transition-all text-xs uppercase tracking-widest ${section === s ? 'bg-primary text-primary-foreground shadow-xl shadow-blue-200 scale-105' : 'bg-white border border-input text-slate-400 hover:border-blue-300'}`}>Section {s}</button>
             ))}
           </div>
         </div>
