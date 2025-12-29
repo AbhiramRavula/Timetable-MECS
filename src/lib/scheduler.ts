@@ -25,7 +25,7 @@ interface ScheduleState {
   libraryCount: Map<string, number>; // sectionId -> count
 }
 
-// ============================================================================
+// =================================A===========================================
 // UTILITIES
 // ============================================================================
 
@@ -217,7 +217,7 @@ const scheduleLabsForSection = (
 };
 
 // ============================================================================
-// AGGRESSIVE THEORY SCHEDULING (NEW)
+// DETERMINISTIC THEORY SCHEDULING
 // ============================================================================
 
 const scheduleTheoryForSection = (
@@ -239,15 +239,14 @@ const scheduleTheoryForSection = (
 
   const workingDays = getWorkingDays(section.year);
   
-  // Create a flat list of all theory periods needed
+  // Create a flat list of all theory periods needed, DO NOT SHUFFLE
   const subjectQueue = theorySubjects.flatMap(s => Array(s.periodsPerWeek).fill(s));
-  shuffle(subjectQueue);
 
   let unscheduledCount = subjectQueue.length;
 
-  // Systematic First-Fit approach
+  // Sequential First-Fit approach - NO SHUFFLING of days or periods
   for (const day of workingDays) {
-      const allDayPeriods = shuffle([...PRE_LUNCH_PERIODS, ...POST_LUNCH_PERIODS]);
+      const allDayPeriods = [...PRE_LUNCH_PERIODS, ...POST_LUNCH_PERIODS];
       for (const period of allDayPeriods) {
           if (subjectQueue.length === 0) break; // All subjects scheduled
 
@@ -357,7 +356,7 @@ export const generateTimetable = (
   }
 
   // PHASE 2: Theory (Core Academic)
-  console.log('PHASE 2: THEORY SCHEDULING (AGGRESSIVE PACKING)');
+  console.log('PHASE 2: THEORY SCHEDULING (DETERMINISTIC PACKING)');
   for (const section of sortedSections) {
     totalUnscheduled += scheduleTheoryForSection(state, subjects, rooms, section);
   }
@@ -370,3 +369,4 @@ export const generateTimetable = (
   
   return state.timetable.sort((a,b) => DAYS.indexOf(a.day) - DAYS.indexOf(b.day) || a.period - b.period);
 };
+
