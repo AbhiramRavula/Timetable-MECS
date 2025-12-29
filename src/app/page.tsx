@@ -1,4 +1,5 @@
 
+
 'use client';
 import React, { useState, useEffect } from 'react';
 import { 
@@ -17,7 +18,9 @@ import {
   GraduationCap,
   Search,
   X,
-  UserCheck
+  UserCheck,
+  Download,
+  CheckCircle2,
 } from 'lucide-react';
 import type { 
   User, 
@@ -165,6 +168,7 @@ export default function App() {
     setState(prev => ({ 
       ...prev, 
       timetable: newTimetable,
+      isPublished: false, // Reset publish state on new generation
       logs: [{ 
         id: Date.now().toString(), 
         timestamp: new Date().toISOString(), 
@@ -172,6 +176,23 @@ export default function App() {
         description: 'Regenerated full department timetable' 
       }, ...prev.logs]
     }));
+  };
+  
+  const handlePublish = () => {
+    setState(prev => ({ 
+      ...prev, 
+      isPublished: true,
+      logs: [{ 
+        id: Date.now().toString(), 
+        timestamp: new Date().toISOString(), 
+        user: currentUser?.name || 'Admin', 
+        description: `Timetable published.` 
+      }, ...prev.logs]
+    }));
+  };
+  
+  const handleDownload = () => {
+    window.print();
   };
 
   const askAi = async () => {
@@ -297,7 +318,7 @@ export default function App() {
                     <Calendar size={40} />
                 </div>
            </div>
-            <h1 className="text-3xl font-black text-center text-slate-900 mb-2 tracking-tight">College Timetable</h1>
+            <h1 className="text-3xl font-black text-center text-slate-900 mb-2 tracking-tight">College Timetable Ace</h1>
             <p className="text-center text-slate-500 mb-10 font-semibold uppercase tracking-widest text-[10px]">Scheduling for Modern Institutions</p>
             <div className="space-y-4">
                 <button onClick={handleAdminLogin} className="w-full py-4 px-6 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl transition-all flex items-center justify-between shadow-xl shadow-blue-100">
@@ -323,7 +344,16 @@ export default function App() {
   
   return (
     <div className="min-h-screen flex bg-slate-50 text-slate-900">
-      <aside className="w-72 bg-white border-r border-slate-200 flex flex-col fixed inset-y-0 shadow-sm z-40">
+      <style>{`
+        @media print {
+          body * { visibility: hidden; }
+          #printable, #printable * { visibility: visible; }
+          #printable { position: absolute; left: 0; top: 0; width: 100%; }
+          aside, header, .noprint { display: none !important; }
+          main { margin-left: 0 !important; padding: 0 !important; }
+        }
+      `}</style>
+      <aside className="w-72 bg-white border-r border-slate-200 flex flex-col fixed inset-y-0 shadow-sm z-40 noprint">
         <div className="p-8 flex items-center space-x-3 mb-4">
           <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white shadow-lg"><Calendar size={20} /></div>
           <span className="text-xl font-black text-slate-900 tracking-tight">Timetable Ace</span>
@@ -359,11 +389,11 @@ export default function App() {
       </aside>
 
       <main className="flex-1 ml-72 p-12 min-h-screen">
-        <header className="mb-12 flex justify-between items-center">
+        <header className="mb-12 flex justify-between items-center noprint">
           <h2 className="text-4xl font-black text-slate-900 capitalize tracking-tight">{activeTab.replace('-', ' ')}</h2>
         </header>
 
-        <div className="animate-in fade-in duration-700">
+        <div id="printable" className="animate-in fade-in duration-700">
           {activeTab === 'dashboard' && currentUser?.role === UserRole.ADMIN && <Dashboard state={state} />}
           {activeTab === 'dashboard' && currentUser?.role === UserRole.FACULTY && <FacultyTimetable facultyId={currentUser.id} state={state} />}
 
@@ -414,15 +444,31 @@ export default function App() {
           )}
           {activeTab === 'generate' && (
             <div className="space-y-12">
-              <div className="flex justify-between items-center bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
+              <div className="flex justify-between items-center bg-white p-8 rounded-3xl border border-slate-200 shadow-sm noprint">
                 <div>
                   <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">Department Scheduler</h3>
-                  <p className="text-slate-500 font-medium">Auto-generate conflict-free academic sessions</p>
+                  <div className="flex items-center space-x-2 mt-1">
+                    {state.isPublished ? (
+                      <span className="flex items-center space-x-1.5 text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full">
+                        <CheckCircle2 size={14}/>
+                        <span>Published</span>
+                      </span>
+                    ) : (
+                      <span className="flex items-center space-x-1.5 text-xs font-bold text-orange-600 bg-orange-50 px-3 py-1 rounded-full">
+                        <Zap size={14} className="animate-pulse"/>
+                        <span>Draft Mode</span>
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <div className="flex space-x-4">
-                   <button onClick={askAi} disabled={isAiLoading} className="flex items-center space-x-2 px-6 py-3.5 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-2xl font-black transition-all border border-indigo-100 text-sm">
-                    <Zap size={18} />
-                    <span>AI Audit</span>
+                  <button onClick={handleDownload} className="flex items-center space-x-2 px-6 py-3.5 bg-slate-800 text-white hover:bg-slate-900 rounded-2xl font-black transition-all border border-slate-100 text-sm">
+                    <Download size={18} />
+                    <span>Download</span>
+                  </button>
+                   <button onClick={handlePublish} disabled={state.isPublished} className="flex items-center space-x-2 px-6 py-3.5 bg-emerald-500 text-white hover:bg-emerald-600 rounded-2xl font-black transition-all border border-emerald-100 text-sm disabled:bg-emerald-200 disabled:cursor-not-allowed">
+                    <CheckCircle2 size={18} />
+                    <span>Approve & Publish</span>
                   </button>
                   <button onClick={onGenerate} className="flex items-center space-x-2 px-8 py-3.5 bg-blue-600 text-white hover:bg-blue-700 rounded-2xl font-black shadow-xl shadow-blue-100 transition-all text-sm">
                     <Plus size={18} />
@@ -431,7 +477,7 @@ export default function App() {
                 </div>
               </div>
               {state.timetable.length > 0 && state.sections.map(section => (
-                <SectionTimetable key={section.id} section={section} timetable={state.timetable.filter(t => t.sectionId === section.id)} subjects={state.subjects} rooms={state.rooms} faculty={state.faculty} onEditCell={handleEditCell} />
+                <SectionTimetable key={section.id} section={section} timetable={state.timetable.filter(t => t.sectionId === section.id)} subjects={state.subjects} rooms={state.rooms} faculty={state.faculty} onEditCell={handleEditCell} isAdmin={currentUser?.role === UserRole.ADMIN} />
               ))}
             </div>
           )}
@@ -592,14 +638,14 @@ const Dashboard = ({ state }: { state: AppState }) => (
   </div>
 );
 
-const SectionTimetable = ({ section, timetable, subjects, rooms, faculty, onEditCell }: { section: Section, timetable: TimetableEntry[], subjects: Subject[], rooms: Room[], faculty: Faculty[], onEditCell: (sectionId: string, day: string, period: number, entry?: TimetableEntry) => void }) => {
+const SectionTimetable = ({ section, timetable, subjects, rooms, faculty, onEditCell, isAdmin }: { section: Section, timetable: TimetableEntry[], subjects: Subject[], rooms: Room[], faculty: Faculty[], onEditCell: (sectionId: string, day: string, period: number, entry?: TimetableEntry) => void, isAdmin: boolean }) => {
   const getEntries = (day: string, period: number) => timetable.filter((t: TimetableEntry) => t.day === day && t.period === period);
   const classTeacher = faculty.find((f: Faculty) => f.id === section.classTeacherId);
   const sectionRoom = rooms.find((r: Room) => r.id === section.defaultRoomId);
   const sectionSubjects = subjects.filter((s: Subject) => s.year === section.year && s.semester === section.semester && (s.section === '' || s.section === section.name));
 
   return (
-    <div className="space-y-8 mt-16 first:mt-0">
+    <div className="space-y-8 mt-16 first:mt-0 break-inside-avoid">
       <div className="bg-white border-2 border-slate-900 rounded-2xl overflow-hidden shadow-2xl">
         <div className="px-8 py-6 border-b-2 border-slate-900 flex justify-between items-end bg-slate-50/50">
           <div>
@@ -629,8 +675,9 @@ const SectionTimetable = ({ section, timetable, subjects, rooms, faculty, onEdit
                   {PERIODS.map(p => {
                     if (p === LUNCH_PERIOD) return <td key={p} className="bg-slate-300 border-r-2 border-slate-900"></td>;
                     const entries = getEntries(day, p);
+                    const canEdit = isAdmin;
                     return (
-                      <td key={p} onClick={() => onEditCell(section.id, day, p, entries.length > 0 ? entries[0] : undefined)} className="p-0 border-r-2 last:border-r-0 border-slate-900 min-w-[150px] h-24 text-center cursor-pointer hover:bg-blue-50 transition-all bg-white group">
+                      <td key={p} onClick={() => canEdit && onEditCell(section.id, day, p, entries.length > 0 ? entries[0] : undefined)} className={`p-0 border-r-2 last:border-r-0 border-slate-900 min-w-[150px] h-24 text-center ${canEdit ? 'cursor-pointer hover:bg-blue-50' : ''} transition-all bg-white group`}>
                         {entries.length > 0 ? (
                           <div className={`h-full flex ${entries.length > 1 ? 'divide-x-2 divide-slate-200' : ''}`}>
                             {entries.map((entry, idx) => {
@@ -646,7 +693,7 @@ const SectionTimetable = ({ section, timetable, subjects, rooms, faculty, onEdit
                             })}
                           </div>
                         ) : (
-                          <div className="flex items-center justify-center h-full text-slate-200 group-hover:text-blue-300"><Plus size={16} /></div>
+                          <div className={`flex items-center justify-center h-full text-slate-200 ${canEdit ? 'group-hover:text-blue-300' : ''}`}>{canEdit && <Plus size={16} />}</div>
                         )}
                       </td>
                     );
@@ -807,12 +854,22 @@ const PublicTimetable = ({ state }: { state: AppState }) => {
           </div>
         </div>
       </div>
-      {filteredSection && state.timetable.length > 0 ? (
-        <div className="max-w-7xl mx-auto"><SectionTimetable section={filteredSection} timetable={filteredTimetable} subjects={state.subjects} rooms={state.rooms} faculty={state.faculty} onEditCell={() => {}} /></div>
+      {state.isPublished && filteredSection && state.timetable.length > 0 ? (
+        <div className="max-w-7xl mx-auto">
+          <SectionTimetable 
+            section={filteredSection} 
+            timetable={filteredTimetable} 
+            subjects={state.subjects} 
+            rooms={state.rooms} 
+            faculty={state.faculty} 
+            onEditCell={() => {}} 
+            isAdmin={false} 
+          />
+        </div>
       ) : (
         <div className="text-center py-40 bg-slate-50/30 rounded-[40px] border-4 border-dashed border-slate-200">
            <Calendar className="mx-auto text-slate-200 mb-8" size={100} />
-           <h4 className="text-3xl font-black text-slate-400 uppercase tracking-tighter">Table Under Generation</h4>
+           <h4 className="text-3xl font-black text-slate-400 uppercase tracking-tighter">Table Not Published</h4>
            <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest mt-4">The selected timetable is either empty or not yet published by the HoD.</p>
         </div>
       )}
@@ -823,6 +880,16 @@ const PublicTimetable = ({ state }: { state: AppState }) => {
 const FacultyTimetable = ({ facultyId, state }: { facultyId: string; state: AppState }) => {
   const { timetable, subjects, sections } = state;
   const facultyTimetable = timetable.filter(entry => entry.facultyId === facultyId);
+
+  if (!state.isPublished) {
+    return (
+      <div className="text-center py-40 bg-slate-50/30 rounded-[40px] border-4 border-dashed border-slate-200">
+         <Calendar className="mx-auto text-slate-200 mb-8" size={100} />
+         <h4 className="text-3xl font-black text-slate-400 uppercase tracking-tighter">Timetable Not Yet Published</h4>
+         <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest mt-4">Please check back later.</p>
+      </div>
+    );
+  }
 
   const getEntry = (day: string, period: number) => {
     return facultyTimetable.find(t => t.day === day && t.period === period);
@@ -881,5 +948,3 @@ const FacultyTimetable = ({ facultyId, state }: { facultyId: string; state: AppS
     </div>
   );
 };
-
-    
