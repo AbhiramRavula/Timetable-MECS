@@ -338,7 +338,7 @@ export default function App() {
                     <Calendar size={40} />
                 </div>
            </div>
-            <h1 className="text-3xl font-black text-center text-slate-900 mb-2 tracking-tight">College Timetable Ace</h1>
+            <h1 className="text-3xl font-black text-center text-slate-900 mb-2 tracking-tight">Timetable MECS</h1>
             <p className="text-center text-slate-500 mb-10 font-semibold uppercase tracking-widest text-[10px]">Scheduling for Modern Institutions</p>
             <div className="space-y-4">
                 <button onClick={handleAdminLogin} className="w-full py-4 px-6 bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-2xl transition-all flex items-center justify-between shadow-xl shadow-blue-100">
@@ -381,7 +381,7 @@ export default function App() {
         <div className={cn("p-4 flex items-center justify-between mb-4", isSidebarCollapsed ? "px-6" : "px-8")}>
           {!isSidebarCollapsed && <div className="flex items-center space-x-3">
               <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-primary-foreground shadow-lg"><Calendar size={20} /></div>
-              <span className="text-xl font-black text-sidebar-foreground tracking-tight">Timetable Ace</span>
+              <span className="text-xl font-black text-sidebar-foreground tracking-tight">Timetable MECS</span>
           </div>}
           <button onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)} className="p-2 text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent rounded-lg">
              {isSidebarCollapsed ? <Menu size={20} /> : <ChevronsLeft size={20} />}

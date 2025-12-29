@@ -78,7 +78,7 @@ Educational institutions depend heavily on well-organized academic timetables to
 
 Despite its importance, timetable generation remains a challenging task in many colleges and universities. Traditional methods largely rely on manual planning or spreadsheet-based approaches, which are time-consuming and highly prone to errors. Common problems include overlapping classes, improper allocation of classrooms, unequal distribution of faculty workload, and difficulty in handling changes caused by holidays, faculty leave, or academic events. These challenges increase administrative workload and often result in confusion among stakeholders. With the advancement of information technology, there is a growing need for automated systems that can handle complex scheduling requirements efficiently.
 
-The **Web-Based Platform for Automated College Timetable Generation (College Timetable Ace)** is designed to address these issues by providing an intelligent and user-friendly scheduling solution. The system automatically generates conflict-free timetables using a heuristic-based backtracking algorithm and predefined constraints, ensuring efficient allocation of faculty, classrooms, and time slots. It also supports role-based access for administrators, faculty, and students, enabling each user to interact with the system according to their responsibilities.
+The **Web-Based Platform for Automated College Timetable Generation (Timetable MECS)** is designed to address these issues by providing an intelligent and user-friendly scheduling solution. The system automatically generates conflict-free timetables using a heuristic-based backtracking algorithm and predefined constraints, ensuring efficient allocation of faculty, classrooms, and time slots. It also supports role-based access for administrators, faculty, and students, enabling each user to interact with the system according to their responsibilities.
 
 By integrating modern web technologies and a scalable system architecture, the proposed platform improves administrative efficiency, reduces errors, and offers flexibility for rescheduling and event management. The system ultimately aims to support smart academic administration and enhance the overall educational experience.
 
@@ -138,7 +138,7 @@ The core of the system is the scheduler engine based on a **Constraint Satisfact
 
 ## Chapter 5: MODULES IN PROPOSED SYSTEM
 
-The College Timetable Ace system is composed of several distinct modules, each responsible for a specific set of functionalities.
+The Timetable MECS system is composed of several distinct modules, each responsible for a specific set of functionalities.
 
 1.  **Data Management Module**
     *   **Objective**: To allow administrators to create, read, update, and delete all core data required for timetable generation.
@@ -172,19 +172,19 @@ The College Timetable Ace system is composed of several distinct modules, each r
 
 ## Chapter 6: UML DIAGRAMS
 
-The College Timetable Ace project uses several diagrams to illustrate the system's structure, components, and interactions. These diagrams serve the purpose of clarifying the system design.
+The Timetable MECS project uses several diagrams to illustrate the system's structure, components, and interactions. These diagrams serve the purpose of clarifying the system design.
 
 ### 6.1 Class Diagram
 
-The Class Diagram shows the static structure of the College Timetable Ace system by representing the main classes, their attributes, and the relationships between them. Key classes include `User`, `Faculty`, `Subject`, `Room`, `Section`, `TimetableEntry`, and the main `App` component that manages state.
+The Class Diagram shows the static structure of the Timetable MECS system by representing the main classes, their attributes, and the relationships between them. Key classes include `User`, `Faculty`, `Subject`, `Room`, `Section`, `TimetableEntry`, and the main `App` component that manages state.
 
 ### 6.2 Use Case Diagram
 
-The Use Case Diagram represents the interactions between the **Admin**, **Faculty**, and **Student** with the College Timetable Ace system. The Admin manages academic data, generates and edits timetables, and monitors audit logs. Faculty members can log in to view their personal timetables, while students can access the public timetable without authentication.
+The Use Case Diagram represents the interactions between the **Admin**, **Faculty**, and **Student** with the Timetable MECS system. The Admin manages academic data, generates and edits timetables, and monitors audit logs. Faculty members can log in to view their personal timetables, while students can access the public timetable without authentication.
 
 ### 6.3 Activity Diagram
 
-The activity diagram illustrates the workflow of the College Timetable Ace system, from user login to timetable publication. It shows the flow of control from an Admin managing data, generating the timetable via the scheduling algorithm, and reviewing the output, which is then made available to Faculty and Students.
+The activity diagram illustrates the workflow of the Timetable MECS system, from user login to timetable publication. It shows the flow of control from an Admin managing data, generating the timetable via the scheduling algorithm, and reviewing the output, which is then made available to Faculty and Students.
 
 ### 6.4 Sequence Diagram
 
